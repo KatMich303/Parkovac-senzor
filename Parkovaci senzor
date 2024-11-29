@@ -1,0 +1,80 @@
+/* Projekt na Internet veci
+ * Cuvaci senzor so svetelnym a zvukovym upozornenim a vypisovanim udajov na monitor serioveho portu
+ */
+
+//Deklaracna cast - deklarovanie premenných a pinov pripojenia
+#define ledka 18 //LED pripojena na PIN D18
+#define bzuciak 19 //bzuciak pripojeny na PIN D19
+#define echo 22 //pin senzoru na prijimanie signalu pripojeny na PIN D22
+#define trig 23 //pin senzoru na vysielanie signalu pripojeny na PIN D23
+long cas; //premenna na meranie casu signalu 
+int vzdialenost; //premenna vzdialenosti senzora od prekazky
+
+// Jednorazove nastavenie pinov ako vstupnych a vystupnych
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(ledka,OUTPUT);        //pin LEDky je vystupny pin
+  pinMode(bzuciak,OUTPUT);      //pin bzuciaka je vystupny pin
+  pinMode(echo,INPUT);          //pin ECHO na prijimanie signalu je vstupny pin
+  pinMode(trig,OUTPUT);         //pin TRIG na vysielanie signalu je vystupny pin
+  digitalWrite(ledka,LOW);      //LED aj bzuciak su vypnute
+  digitalWrite(bzuciak,LOW);
+  Serial.println("Senzor priblizenia s LED a bzuciakom");
+}
+
+//Nekonecna slucka merania vzdialenosti a vyhodnotenia stavu v zavislosti od vzdialenosti
+void loop() {
+  digitalWrite(trig,LOW);         //"precistenie" pinu na vysielanie signalu
+  delayMicroseconds(2);     
+  digitalWrite(trig,HIGH);        //zapnutie pinu na vysielanie ultrasonickeho signalu
+  delayMicroseconds(10);          //poslanie signalu v dlzke trvania 10 mikrosekund
+  digitalWrite(trig,LOW);         //vypnutie pinu na vysielanie signalu
+
+  cas = pulseIn(echo,HIGH);       //nacitanie dlzky trvania prichodu signalu do premennej "cas"
+  vzdialenost = (cas * 0.0344)/2; //vypocet vzdialenosti, cislo = 0,0344 je rychlost sirenia zvuku v stabilnych podmienkach, , deleno 2 - cesta signalu tam aj spat
+  delay(100);
+  
+  Serial.print("Vzdialenost: "); //vypis vzdialenosti na monitor serioveho portu
+  Serial.print(vzdialenost);
+  Serial.println(" cm");
+
+  //vyhodnotenie stavu v zavislosti na vzdialenosti od objektu
+  //pomocou vnorenej podmienky if porovnava premennu "vzdialenost" v roznych intervaloch
+  
+  if (vzdialenost<=50 && vzdialenost >40){           //ak je vzdialenost menej ako 50 cm a sucasne viac ako 40 cm
+     Serial.println("Cuvaj este...");                 //vypisuj na monitor serioveho portu "Cuvaj este"
+     cuvaj(1000);                                      //LED a bzuciak sa zapinaju a vypinaju v intervale 500 ms
+    }  
+  else if (vzdialenost <= 40 && vzdialenost >15) {    //ak je vzdialenost menej ako 40 cm a sucasne viac ako 15 cm
+    Serial.println("Spomaluj...");                    //vypisuj "Spomaluj..."
+    cuvaj(300);                                       //LED a bzuciak sa zapnu a vypnu na dobu 300 ms
+    }    
+
+  else if (vzdialenost<=15 && vzdialenost >5 ) {      //ak je vzdialenost menej ako 15 cm a sucasne viac ako 5 cm
+    Serial.println("SPOMAL!");                        //vypisuj "SPOMAL!"
+    cuvaj(100);
+    }
+
+  else if (vzdialenost <= 5) {                        //ak je vzdialenost menej ako 5 cm
+    Serial.println("STOP");                           //vypisuj "STOP!"
+    digitalWrite(bzuciak,HIGH);                       //LED a bzuciak su stale zapnute
+    digitalWrite(ledka,HIGH);
+    }
+   
+  else {                                              //ak je vzdialenost viac ako 50 cm
+    Serial.println("Cuvaj");                          //vypni LED aj bzuciak a vypisuj "Cuvaj"
+    digitalWrite(bzuciak,LOW);       
+    digitalWrite(ledka,LOW);
+    }
+}
+
+//funkcia "cuvaj" pre skratenie kodu
+void cuvaj(int cas_blik) {          //po zadani celociselnej premennej "cas_blik"
+      digitalWrite(ledka,HIGH);     //sa LED a bzuciak zapnu a vypnu v zadanom intervale "cas_blik"
+      digitalWrite(bzuciak,HIGH);   //napr. "cuvaj(1000)" znamena, ze sa LED aj bzuciak zapnu a vypnu na 1 sekundu
+      delay(cas_blik);
+      digitalWrite(ledka,LOW);
+      digitalWrite(bzuciak,LOW);
+      delay(cas_blik);
+}
